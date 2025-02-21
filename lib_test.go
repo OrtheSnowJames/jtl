@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"jtl"
+	"github.com/OrtheSnowJames/jtl"
 )
 
 func TestParse(t *testing.T) {

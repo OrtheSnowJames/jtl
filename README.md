@@ -88,3 +88,5 @@ Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goDQiBpm/g
 
 ok  	jtl	0.004s	coverage: 91.6% of statements
 ```
+
+latest commit: fixed go mod

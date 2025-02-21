@@ -1,0 +1,1 @@
+/usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goDQiBpm/go-code-cover github.com/OrtheSnowJames/jtl
