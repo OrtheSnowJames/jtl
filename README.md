@@ -30,7 +30,7 @@ map[string]interface{}{
 }
 ```
 
-I made this because html and xml were annoying to write all that in it's called productivity
+I made this because html and xml were annoying to write all that in. I call it productivity.
 
 import:
 
@@ -82,11 +82,26 @@ local content = "$env:NAME";
 
 And there you have it. You sucessfully parsed a jtl document and printed it. What you do with the data now, no one knows.
 
-yes, tests were passed (2/21/2025)
+yes, tests were passed (2/22/2025)
 ```output
 Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goDQiBpm/go-code-cover jtl
 
 ok  	jtl	0.004s	coverage: 91.6% of statements
 ```
 
-latest commit: fixed go mod
+Latest Commit: Refactored to use vec with all of them instead of using key value inside a map/[ string]/ interface{} ex:
+from:
+map/[ string /] interface{}{
+    "foo": {
+        "Content (or Contents)": "20"
+    }
+}
+
+to:
+[]interface{} [
+    {
+        "key": "foo",
+        "Content (or Contents)": "20"
+    }
+]
+.
