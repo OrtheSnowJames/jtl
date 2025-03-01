@@ -21,8 +21,9 @@ func Parse(text string) ([]interface{}, error) {
 	inEnv := false
 	currentEnv := make(map[string]string)
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+	// Use a traditional for-loop so we can advance the index when needed.
+	for i := 0; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
 		if line == "" || strings.HasPrefix(line, "/*") || strings.HasPrefix(line, "*/") || strings.HasPrefix(line, ">//>") {
 			continue
 		}
@@ -40,7 +41,7 @@ func Parse(text string) ([]interface{}, error) {
 			continue
 		}
 
-		// Handle environment variables
+		// Process environment declarations.
 		if inEnv && strings.HasPrefix(line, ">>>") {
 			declarations := strings.Split(line, ";")
 			for _, declaration := range declarations {
@@ -56,13 +57,33 @@ func Parse(text string) ([]interface{}, error) {
 			}
 		}
 
-		// Handle body elements
+		// Process body elements.
 		if inBody && strings.HasPrefix(line, ">") {
-			elementMap, err := parseElement(line, currentEnv)
-			if err != nil {
-				return nil, err
+			// If the line contains the start of a bracketed block but not its closing,
+			// accumulate subsequent lines until we find the closing "]]".
+			if strings.Contains(line, "[[") && !strings.Contains(line, "]]") {
+				elementLines := []string{line}
+				for j := i + 1; j < len(lines); j++ {
+					nextLine := lines[j]
+					elementLines = append(elementLines, nextLine)
+					if strings.Contains(nextLine, "]]") {
+						i = j // advance outer loop index past the element
+						break
+					}
+				}
+				fullElementText := strings.Join(elementLines, "\n")
+				elementMap, err := parseElement(fullElementText, currentEnv)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, elementMap)
+			} else {
+				elementMap, err := parseElement(line, currentEnv)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, elementMap)
 			}
-			result = append(result, elementMap)
 		}
 	}
 
@@ -71,12 +92,16 @@ func Parse(text string) ([]interface{}, error) {
 
 // parseElement parses a single JTL element.
 func parseElement(line string, env map[string]string) (interface{}, error) {
+	// Remove the leading ">".
 	line = strings.TrimPrefix(line, ">")
 
-	if !strings.Contains(line, ">") {
+	// Find the first ">" which separates the attributes from the rest.
+	contentStart := strings.Index(line, ">")
+	if contentStart == -1 {
 		return nil, errors.New("invalid element format: missing separator")
 	}
 
+	// Parse attributes using a regex.
 	attrRegex := regexp.MustCompile(`(\w+)="([^"]+)"`)
 	matches := attrRegex.FindAllStringSubmatch(line, -1)
 	if len(matches) == 0 {
@@ -88,15 +113,12 @@ func parseElement(line string, env map[string]string) (interface{}, error) {
 		elementMap[match[1]] = match[2]
 	}
 
-	// Extract content and ID
-	contentStart := strings.Index(line, ">")
-	if contentStart == -1 {
-		return nil, errors.New("invalid element format: missing content separator")
-	}
-
+	// Extract the remainder after the first ">".
 	contentPart := line[contentStart+1:]
+	// Remove the trailing semicolon if present.
 	contentPart = strings.TrimSuffix(contentPart, ";")
 
+	// Split into an element ID and its content.
 	parts := strings.SplitN(contentPart, ">", 2)
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return nil, errors.New("invalid element format: malformed content")
@@ -105,7 +127,8 @@ func parseElement(line string, env map[string]string) (interface{}, error) {
 	id := parts[0]
 	content := parts[1]
 
-	// Handle environment variable replacement
+	// Do not trim any brackets. All brackets are preserved.
+	// Replace environment variable references.
 	if strings.HasPrefix(content, "$env:") {
 		envVar := strings.TrimPrefix(content, "$env:")
 		if val, ok := env[envVar]; ok {
@@ -113,7 +136,7 @@ func parseElement(line string, env map[string]string) (interface{}, error) {
 		}
 	}
 
-	// Add new fields as per the updated Rust code
+	// Add the parsed fields to the element map.
 	elementMap["KEY"] = id
 	elementMap["Content"] = content
 	elementMap["Contents"] = content
@@ -130,7 +153,6 @@ func Stringify(data []interface{}) (string, error) {
 	return string(b), nil
 }
 
-
 // ParseEnv extracts environment variables from JTL text.
 func ParseEnv(text string) (map[string]interface{}, error) {
 	envMap := make(map[string]interface{})
@@ -142,7 +164,7 @@ func ParseEnv(text string) (map[string]interface{}, error) {
 
 	inEnv := false
 
-	envParsing:
+envParsing:
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "/*") || strings.HasPrefix(line, "*/") || strings.HasPrefix(line, ">//>") {
@@ -154,7 +176,7 @@ func ParseEnv(text string) (map[string]interface{}, error) {
 			inEnv = true
 			continue
 		case ">>>BEGIN;":
-			break envParsing // Properly exits the outer loop
+			break envParsing // Exit the loop once the body begins.
 		}
 
 		if inEnv && strings.HasPrefix(line, ">>>") {

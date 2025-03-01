@@ -100,6 +100,35 @@ func TestParse(t *testing.T) {
 >>>END;`,
 			wantErr: true,
 		},
+		{
+			name: "bracketed content",
+			input: `>>>DOCTYPE=JTL;
+>>>BEGIN;
+    >type="lua">script>[[
+        document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]];
+>>>END;`,
+			// Note: In the updated lib, the outer bracket markers ([[ and ]]) are preserved.
+			expected: []interface{}{
+				map[string]interface{}{
+					"KEY":  "script",
+					"type": "lua",
+					"Content": `[[
+        document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]]`,
+					"Contents": `[[
+        document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]]`,
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

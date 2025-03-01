@@ -82,26 +82,23 @@ local content = "$env:NAME";
 
 And there you have it. You sucessfully parsed a jtl document and printed it. What you do with the data now, no one knows.
 
-yes, tests were passed (2/22/2025)
+yes, tests were passed (2/28/2025)
 ```output
-Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goDQiBpm/go-code-cover jtl
+Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goIRDVA0/go-code-cover github.com/OrtheSnowJames/jtl
 
-ok  	jtl	0.004s	coverage: 91.6% of statements
+ok  	github.com/OrtheSnowJames/jtl	0.004s	coverage: 95.1% of statements
 ```
 
-Latest Commit: Refactored to use vec with all of them instead of using key value inside a map/[ string]/ interface{} ex:
-from:
-map/[ string /] interface{}{
-    "foo": {
-        "Content (or Contents)": "20"
-    }
-}
-
-to:
-[]interface{} [
-    {
-        "key": "foo",
-        "Content (or Contents)": "20"
-    }
-]
+Latest Commit: Refactored to allow brackets (I thought it already could, but turns out you couldn't.)
+You can now do this
+```
+>>>DOCTYPE=JTL;
+>>>BEGIN;
+    >type="lua">script>[[
+        document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]];
+>>>END;
+```
 .
