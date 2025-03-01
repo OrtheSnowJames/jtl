@@ -52,7 +52,7 @@ parse
 ```go
 func main() {
     parsed, err := jtl.Parse(`
-DOCTYPE=JTL
+>>>DOCTYPE=JTL
 
 >>>ENV;
     >>>NAME=me
@@ -60,8 +60,11 @@ DOCTYPE=JTL
 
 >>>BEGIN;
     >//>this is a comment
-    >type="content/lua">script>"
-local content = "$env:NAME";
+    >type="lua">script>
+        document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]]);
 ";
 <<<ENDL
 >>>END;
@@ -84,21 +87,27 @@ And there you have it. You sucessfully parsed a jtl document and printed it. Wha
 
 yes, tests were passed (2/28/2025)
 ```output
-Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goIRDVA0/go-code-cover github.com/OrtheSnowJames/jtl
+Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goFouTWb/go-code-cover github.com/OrtheSnowJames/jtl
 
-ok  	github.com/OrtheSnowJames/jtl	0.004s	coverage: 95.1% of statements
+ok  	github.com/OrtheSnowJames/jtl	0.005s	coverage: 96.1% of statements
 ```
 
-Latest Commit: Refactored to allow brackets (I thought it already could, but turns out you couldn't.)
+Latest Commit: Fixed: Refactored to allow brackets (I thought it already could, but turns out you couldn't.)
 You can now do this
 ```
->>>DOCTYPE=JTL;
+>>>DOCTYPE=JTL
+
+>>>ENV;
+    >>>NAME=me
+>>>version=1.0;
+
 >>>BEGIN;
-    >type="lua">script>[[
+    >type="lua">script>
         document.onEvent(".buttontest", "click", [[
             print("Button clicked!")
             -- Do more stuff here
-        ]];
+        ]]);
+    >class="buttontest">button>Test Button;
 >>>END;
 ```
 .

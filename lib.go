@@ -21,7 +21,7 @@ func Parse(text string) ([]interface{}, error) {
 	inEnv := false
 	currentEnv := make(map[string]string)
 
-	// Use a traditional for-loop so we can advance the index when needed.
+	// Process the document line by line.
 	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 		if line == "" || strings.HasPrefix(line, "/*") || strings.HasPrefix(line, "*/") || strings.HasPrefix(line, ">//>") {
@@ -59,84 +59,81 @@ func Parse(text string) ([]interface{}, error) {
 
 		// Process body elements.
 		if inBody && strings.HasPrefix(line, ">") {
-			// If the line contains the start of a bracketed block but not its closing,
-			// accumulate subsequent lines until we find the closing "]]".
-			if strings.Contains(line, "[[") && !strings.Contains(line, "]]") {
-				elementLines := []string{line}
+			fullElement := line
+			// If the current line does not end with ";" then it's a multi-line element.
+			if !strings.HasSuffix(line, ";") {
 				for j := i + 1; j < len(lines); j++ {
 					nextLine := lines[j]
-					elementLines = append(elementLines, nextLine)
-					if strings.Contains(nextLine, "]]") {
-						i = j // advance outer loop index past the element
+					fullElement += "\n" + nextLine
+					if strings.HasSuffix(strings.TrimSpace(nextLine), ";") {
+						i = j // move outer loop index past the complete element
 						break
 					}
 				}
-				fullElementText := strings.Join(elementLines, "\n")
-				elementMap, err := parseElement(fullElementText, currentEnv)
-				if err != nil {
-					return nil, err
-				}
-				result = append(result, elementMap)
-			} else {
-				elementMap, err := parseElement(line, currentEnv)
-				if err != nil {
-					return nil, err
-				}
-				result = append(result, elementMap)
 			}
+			elementMap, err := parseElement(fullElement, currentEnv)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, elementMap)
 		}
 	}
 
 	return result, nil
 }
 
-// parseElement parses a single JTL element.
-func parseElement(line string, env map[string]string) (interface{}, error) {
-	// Remove the leading ">".
-	line = strings.TrimPrefix(line, ">")
+// parseElement parses a single JTL element by locating the first two ">" separators.
+func parseElement(elementText string, env map[string]string) (interface{}, error) {
+	// Remove the leading ">" and the trailing ";".
+	elementText = strings.TrimPrefix(elementText, ">")
+	elementText = strings.TrimSuffix(elementText, ";")
 
-	// Find the first ">" which separates the attributes from the rest.
-	contentStart := strings.Index(line, ">")
-	if contentStart == -1 {
-		return nil, errors.New("invalid element format: missing separator")
+	// Find the first ">" separator that ends the attribute part.
+	firstSep := strings.Index(elementText, ">")
+	if firstSep == -1 {
+		return nil, errors.New("invalid element format: missing first separator")
+	}
+	attributesPart := elementText[:firstSep]
+	remainder := elementText[firstSep+1:]
+
+	// Find the second ">" separator that separates the element ID from its content.
+	secondSep := strings.Index(remainder, ">")
+	if secondSep == -1 {
+		return nil, errors.New("invalid element format: missing second separator")
+	}
+	id := strings.TrimSpace(remainder[:secondSep])
+	content := remainder[secondSep+1:]
+
+	// For non-bracketed content, trim surrounding whitespace.
+	if !strings.HasPrefix(content, "[[") {
+		content = strings.TrimSpace(content)
 	}
 
-	// Parse attributes using a regex.
-	attrRegex := regexp.MustCompile(`(\w+)="([^"]+)"`)
-	matches := attrRegex.FindAllStringSubmatch(line, -1)
-	if len(matches) == 0 {
-		return nil, errors.New("invalid element format: no attributes found")
-	}
-
-	elementMap := make(map[string]interface{})
-	for _, match := range matches {
-		elementMap[match[1]] = match[2]
-	}
-
-	// Extract the remainder after the first ">".
-	contentPart := line[contentStart+1:]
-	// Remove the trailing semicolon if present.
-	contentPart = strings.TrimSuffix(contentPart, ";")
-
-	// Split into an element ID and its content.
-	parts := strings.SplitN(contentPart, ">", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+	// Ensure neither the element id nor the content is empty.
+	if id == "" || content == "" {
 		return nil, errors.New("invalid element format: malformed content")
 	}
 
-	id := parts[0]
-	content := parts[1]
-
-	// Do not trim any brackets. All brackets are preserved.
 	// Replace environment variable references.
 	if strings.HasPrefix(content, "$env:") {
-		envVar := strings.TrimPrefix(content, "$env:")
+		// Trim any surrounding whitespace from the env key.
+		envVar := strings.TrimSpace(strings.TrimPrefix(content, "$env:"))
 		if val, ok := env[envVar]; ok {
 			content = val
 		}
 	}
 
-	// Add the parsed fields to the element map.
+	// Process attributes using a regex.
+	attrRegex := regexp.MustCompile(`(\w+)="([^"]+)"`)
+	matches := attrRegex.FindAllStringSubmatch(attributesPart, -1)
+	if len(matches) == 0 {
+		return nil, errors.New("invalid element format: no attributes found")
+	}
+	elementMap := make(map[string]interface{})
+	for _, match := range matches {
+		elementMap[match[1]] = match[2]
+	}
+
 	elementMap["KEY"] = id
 	elementMap["Content"] = content
 	elementMap["Contents"] = content
@@ -176,7 +173,7 @@ envParsing:
 			inEnv = true
 			continue
 		case ">>>BEGIN;":
-			break envParsing // Exit the loop once the body begins.
+			break envParsing // exit once the body begins
 		}
 
 		if inEnv && strings.HasPrefix(line, ">>>") {

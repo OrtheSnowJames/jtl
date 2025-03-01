@@ -129,6 +129,44 @@ func TestParse(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "lua script with button",
+			input: `>>>DOCTYPE=JTL
+
+>>>ENV;
+    >>>NAME=me
+>>>version=1.0;
+
+>>>BEGIN;
+    >type="lua">script>
+        document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]]);
+    >class="buttontest">button>Test Button;
+>>>END;`,
+			expected: []interface{}{
+				map[string]interface{}{
+					"KEY":  "script",
+					"type": "lua",
+					"Content": `document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]])`,
+					"Contents": `document.onEvent(".buttontest", "click", [[
+            print("Button clicked!")
+            -- Do more stuff here
+        ]])`,
+				},
+				map[string]interface{}{
+					"KEY":      "button",
+					"class":    "buttontest",
+					"Content":  "Test Button",
+					"Contents": "Test Button",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
