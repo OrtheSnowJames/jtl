@@ -85,29 +85,21 @@ func main() {
 
 And there you have it. You sucessfully parsed a jtl document and printed it. What you do with the data now, no one knows.
 
-yes, tests were passed (2/28/2025)
+yes, tests were passed (2/29/2025)
 ```output
-Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goFouTWb/go-code-cover github.com/OrtheSnowJames/jtl
+Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-go1krrVp/go-code-cover github.com/OrtheSnowJames/jtl
 
-ok  	github.com/OrtheSnowJames/jtl	0.005s	coverage: 96.1% of statements
+ok  	github.com/OrtheSnowJames/jtl	0.004s	coverage: 95.1% of statements
 ```
 
-Latest Commit: Fixed: Refactored to allow brackets (I thought it already could, but turns out you couldn't.)
+Latest Commit: Allows you to make blank tags
 You can now do this
 ```
->>>DOCTYPE=JTL
-
->>>ENV;
-    >>>NAME=me
->>>version=1.0;
+>>>DOCTYPE=JTL;
 
 >>>BEGIN;
-    >type="lua">script>
-        document.onEvent(".buttontest", "click", [[
-            print("Button clicked!")
-            -- Do more stuff here
-        ]]);
-    >class="buttontest">button>Test Button;
+    >src="test.lua">script>;
+    >class="empty">div>;
 >>>END;
 ```
 .

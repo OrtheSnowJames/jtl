@@ -109,14 +109,13 @@ func parseElement(elementText string, env map[string]string) (interface{}, error
 		content = strings.TrimSpace(content)
 	}
 
-	// Ensure neither the element id nor the content is empty.
-	if id == "" || content == "" {
-		return nil, errors.New("invalid element format: malformed content")
+	// Ensure the element id is not empty
+	if id == "" {
+		return nil, errors.New("invalid element format: empty element id")
 	}
 
-	// Replace environment variable references.
-	if strings.HasPrefix(content, "$env:") {
-		// Trim any surrounding whitespace from the env key.
+	// Replace environment variable references only if content is not empty
+	if content != "" && strings.HasPrefix(content, "$env:") {
 		envVar := strings.TrimSpace(strings.TrimPrefix(content, "$env:"))
 		if val, ok := env[envVar]; ok {
 			content = val

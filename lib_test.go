@@ -98,7 +98,16 @@ func TestParse(t *testing.T) {
 >>>BEGIN;
     >class="test" tag="div">id>;
 >>>END;`,
-			wantErr: true,
+			expected: []interface{}{
+				map[string]interface{}{
+					"KEY":      "id",
+					"class":    "test",
+					"tag":      "div",
+					"Content":  "",
+					"Contents": "",
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name: "bracketed content",
@@ -163,6 +172,29 @@ func TestParse(t *testing.T) {
 					"class":    "buttontest",
 					"Content":  "Test Button",
 					"Contents": "Test Button",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty tag content",
+			input: `>>>DOCTYPE=JTL;
+>>>BEGIN;
+    >src="test.lua">script>;
+    >class="empty">div>;
+>>>END;`,
+			expected: []interface{}{
+				map[string]interface{}{
+					"KEY":      "script",
+					"src":      "test.lua",
+					"Content":  "",
+					"Contents": "",
+				},
+				map[string]interface{}{
+					"KEY":      "div",
+					"class":    "empty",
+					"Content":  "",
+					"Contents": "",
 				},
 			},
 			wantErr: false,
