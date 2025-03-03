@@ -159,13 +159,13 @@ func TestParse(t *testing.T) {
 					"KEY":  "script",
 					"type": "lua",
 					"Content": `document.onEvent(".buttontest", "click", [[
-            print("Button clicked!")
-            -- Do more stuff here
-        ]])`,
+    print("Button clicked!")
+    -- Do more stuff here
+]])`,
 					"Contents": `document.onEvent(".buttontest", "click", [[
-            print("Button clicked!")
-            -- Do more stuff here
-        ]])`,
+    print("Button clicked!")
+    -- Do more stuff here
+]])`,
 				},
 				map[string]interface{}{
 					"KEY":      "button",
@@ -195,6 +195,80 @@ func TestParse(t *testing.T) {
 					"class":    "empty",
 					"Content":  "",
 					"Contents": "",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "nested elements",
+			input: `>>>DOCTYPE=JTL;
+>>>BEGIN;
+    >class="container">div>;
+        >id="p1">p>Hello;
+        >id="p2">p>World;
+    >class="container2">div>;
+        >id="p3">p>Another paragraph;
+>>>END;`,
+			expected: []interface{}{
+				map[string]interface{}{
+					"KEY":      "div",
+					"class":    "container",
+					"Content":  "",
+					"Contents": "",
+					"children": []interface{}{
+						map[string]interface{}{
+							"KEY":      "p",
+							"id":       "p1",
+							"Content":  "Hello",
+							"Contents": "Hello",
+						},
+						map[string]interface{}{
+							"KEY":      "p",
+							"id":       "p2",
+							"Content":  "World",
+							"Contents": "World",
+						},
+					},
+				},
+				map[string]interface{}{
+					"KEY":      "div",
+					"class":    "container2",
+					"Content":  "",
+					"Contents": "",
+					"children": []interface{}{
+						map[string]interface{}{
+							"KEY":      "p",
+							"id":       "p3",
+							"Content":  "Another paragraph",
+							"Contents": "Another paragraph",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "simple nested divs",
+			input: `>>>DOCTYPE=JTL;
+
+>>>BEGIN;
+    >id="cooldiv">div>;
+        >id="othercooldiv">div>;
+>>>END;`,
+			expected: []interface{}{
+				map[string]interface{}{
+					"KEY":      "div",
+					"id":       "cooldiv",
+					"Content":  "",
+					"Contents": "",
+					"children": []interface{}{
+						map[string]interface{}{
+							"KEY":      "div",
+							"id":       "othercooldiv",
+							"Content":  "",
+							"Contents": "",
+						},
+					},
 				},
 			},
 			wantErr: false,

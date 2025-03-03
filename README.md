@@ -85,21 +85,21 @@ func main() {
 
 And there you have it. You sucessfully parsed a jtl document and printed it. What you do with the data now, no one knows.
 
-yes, tests were passed (2/29/2025)
+yes, tests were passed (3/2/2025)
 ```output
-Running tool: /usr/bin/go test -timeout 30s -coverprofile=/tmp/vscode-go1krrVp/go-code-cover github.com/OrtheSnowJames/jtl
+Running tool: /var/lib/snapd/snap/bin/go test -timeout 30s -coverprofile=/tmp/vscode-goEItiGf/go-code-cover github.com/OrtheSnowJames/jtl
 
-ok  	github.com/OrtheSnowJames/jtl	0.004s	coverage: 95.1% of statements
+ok  	github.com/OrtheSnowJames/jtl	0.004s	coverage: 96.2% of statements
 ```
 
-Latest Commit: Allows you to make blank tags
+Latest Commit: Allows you to make nested tags
 You can now do this
 ```
 >>>DOCTYPE=JTL;
 
 >>>BEGIN;
-    >src="test.lua">script>;
-    >class="empty">div>;
+    >id="cooldiv">div>;
+        >id="othercooldiv">div>;
 >>>END;
 ```
 .

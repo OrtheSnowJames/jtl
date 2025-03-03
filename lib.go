@@ -21,13 +21,21 @@ func Parse(text string) ([]interface{}, error) {
 	inEnv := false
 	currentEnv := make(map[string]string)
 
-	// Process the document line by line.
+	type stackItem struct {
+		element interface{}
+		indent  int
+	}
+	stack := []stackItem{}
+
 	for i := 0; i < len(lines); i++ {
+		indent := countIndentation(lines[i])
 		line := strings.TrimSpace(lines[i])
+
 		if line == "" || strings.HasPrefix(line, "/*") || strings.HasPrefix(line, "*/") || strings.HasPrefix(line, ">//>") {
 			continue
 		}
 
+		// Handle section markers
 		switch line {
 		case ">>>ENV;":
 			inEnv = true
@@ -41,7 +49,7 @@ func Parse(text string) ([]interface{}, error) {
 			continue
 		}
 
-		// Process environment declarations.
+		// Handle environment variables
 		if inEnv && strings.HasPrefix(line, ">>>") {
 			declarations := strings.Split(line, ";")
 			for _, declaration := range declarations {
@@ -55,38 +63,63 @@ func Parse(text string) ([]interface{}, error) {
 					}
 				}
 			}
+			continue
 		}
 
-		// Process body elements.
+		// Handle body elements
 		if inBody && strings.HasPrefix(line, ">") {
-			fullElement := line
-			// If the current line does not end with ";" then it's a multi-line element.
+			// Collect multi-line content
+			fullContent := line
 			if !strings.HasSuffix(line, ";") {
 				for j := i + 1; j < len(lines); j++ {
 					nextLine := lines[j]
-					fullElement += "\n" + nextLine
+					fullContent += "\n" + nextLine
 					if strings.HasSuffix(strings.TrimSpace(nextLine), ";") {
-						i = j // move outer loop index past the complete element
+						i = j // Skip processed lines
 						break
 					}
 				}
 			}
-			elementMap, err := parseElement(fullElement, currentEnv)
+
+			element, err := parseElement(fullContent, currentEnv)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, elementMap)
+
+			// Pop stack items with greater or equal indentation
+			for len(stack) > 0 && stack[len(stack)-1].indent >= indent {
+				stack = stack[:len(stack)-1]
+			}
+
+			if len(stack) > 0 {
+				// Add as child to parent
+				parent := stack[len(stack)-1].element.(map[string]interface{})
+				if _, exists := parent["children"]; !exists {
+					parent["children"] = make([]interface{}, 0)
+				}
+				parent["children"] = append(parent["children"].([]interface{}), element)
+			} else {
+				// Root level element
+				result = append(result, element)
+			}
+
+			// Push current element to stack
+			stack = append(stack, stackItem{element, indent})
 		}
 	}
 
 	return result, nil
 }
 
+func countIndentation(line string) int {
+	return len(line) - len(strings.TrimLeft(line, " \t"))
+}
+
 // parseElement parses a single JTL element by locating the first two ">" separators.
 func parseElement(elementText string, env map[string]string) (interface{}, error) {
-	// Remove the leading ">" and the trailing ";".
+	// Remove the leading ">" and the trailing ";"
 	elementText = strings.TrimPrefix(elementText, ">")
-	elementText = strings.TrimSuffix(elementText, ";")
+	elementText = strings.TrimSuffix(strings.TrimSpace(elementText), ";")
 
 	// Find the first ">" separator that ends the attribute part.
 	firstSep := strings.Index(elementText, ">")
@@ -104,8 +137,35 @@ func parseElement(elementText string, env map[string]string) (interface{}, error
 	id := strings.TrimSpace(remainder[:secondSep])
 	content := remainder[secondSep+1:]
 
-	// For non-bracketed content, trim surrounding whitespace.
-	if !strings.HasPrefix(content, "[[") {
+	// Handle multi-line and bracketed content
+	if strings.Contains(content, "\n") {
+		lines := strings.Split(content, "\n")
+		// Find minimum indentation level
+		minIndent := -1
+		for _, line := range lines {
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			indent := len(line) - len(strings.TrimLeft(line, " \t"))
+			if minIndent == -1 || indent < minIndent {
+				minIndent = indent
+			}
+		}
+
+		// Remove common indentation and trim each line
+		var processedLines []string
+		for _, line := range lines {
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			if minIndent > 0 && len(line) >= minIndent {
+				line = line[minIndent:]
+			}
+			processedLines = append(processedLines, strings.TrimRight(line, " \t"))
+		}
+		content = strings.Join(processedLines, "\n")
+		content = strings.TrimSpace(content)
+	} else {
 		content = strings.TrimSpace(content)
 	}
 
